@@ -1,0 +1,222 @@
+---
+title: "Data visualisation"
+author : "Jeremy Wicquart"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: "cosmo"
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+# Load packages
+
+```{r base}
+
+# 1. Source functions ----
+
+source("functions/graphical_par.R")
+source("functions/theme_map.R")
+source("functions/theme_graph.R")
+
+# 2. Required packages ----
+
+library(tidyverse)
+library(magrittr)
+library(sf)
+library(patchwork)
+sf_use_s2(FALSE) # Switch from S2 to GEOS
+
+# 3. Define the CRS ----
+
+crs_selected <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=160 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+
+```
+
+# Figure 1 - A
+
+```{r}
+
+# 4. Load background maps and change its CRS ----
+
+# 4.1 Load shapefile --
+
+data_map <- read_sf("../data/00_natural-earth-data/ne_10m_land/ne_10m_land.shp") %>% 
+  st_transform(crs = 4326)
+
+# 4.2 Define the offset --
+
+correction_offset <- 180 - 160 # Here 160 is the same value than +lon_0 from crs_selected
+
+# 4.3 Define a long and slim polygon that overlaps the meridian line --
+
+correction_polygon <- st_polygon(x = list(rbind(c(-0.0001 - correction_offset, 90),
+                                                c(0 - correction_offset, 90),
+                                                c(0 - correction_offset, -90),
+                                                c(-0.0001 - correction_offset, -90),
+                                                c(-0.0001 - correction_offset, 90)))) %>%
+  st_sfc() %>%
+  st_set_crs(4326)
+
+# 4.4 Modify data_map to remove overlapping portions using correction_polygon --
+
+data_map <- data_map %>% 
+  st_difference(correction_polygon) %>% 
+  st_transform(crs_selected)
+
+# 5. Load country boundaries data ----
+
+data_countries <- read_sf("../data/00_natural-earth-data/ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp") %>% 
+  st_transform(crs = 4326) %>% 
+  st_transform(crs = crs_selected)
+
+# 6. Load and transform benthic cover synthetic dataset ----
+
+# 6.1 GCRMN regions --
+
+load("../data/gcrmn_regions.RData")
+
+# 6.2 Benthic cover synthetic dataset --
+
+gcrmn_path <- "C:/Users/jwicquart/Desktop/Recherche/Projets/2019-07-08 - Global Coral Reef Monitoring Network/GCRMN_2020/data/"
+
+data_benthos <- read.csv2(paste0(gcrmn_path, "03-merge_all_all_all_benthos_NA.csv"), stringsAsFactors = TRUE) %>% 
+  filter(!(DatasetID %in% c("XLCA1", "XLCA2", "XLCA3", "XLCA4", "XLCA5",
+                            "PACN1.1", "PACN1.2", "PACN1.3", "PACN1.4",
+                            "TIAH1", "RFCK1"))) %>% # Remove datasets unused by Murray for the analyses
+  # Sites with incorrect position (not corrected during QAQC)
+  filter(!(Longitude %in% c(33.50138889, 52.7500, 50.71666667))) %>% 
+  filter(!(Site %in% c("34.26.62E.28.51.79S", "34.41.08E.27.31.66S", "NSIslandsSouth", 
+                       "29N34E4", "34.4.4.97E.29.7.39.89N", "34.26.013E.28.26.151N", "34.18.5E27.54.8N"))) %>% 
+  mutate(Date = as.Date(Date)) %>% 
+  select(Latitude, Longitude) %>% 
+  drop_na(Latitude, Longitude) %>% 
+  distinct() %>% 
+  st_as_sf(., coords = c("Longitude", "Latitude"), crs = 4326) %>% 
+  # Add gcrmn_region using a spatial join
+  st_intersection(., data_gcrmn_regions) %>% 
+  # Remove point falling outside gcrmn_regions polygon
+  drop_na(gcrmn_region) %>% 
+  st_transform(crs = crs_selected) %>% 
+  mutate(color = if_else(gcrmn_region == "East Asia", "#d64541", "#446CB3"))
+
+# 7. Transform CRS ----
+
+data_gcrmn_regions <- data_gcrmn_regions %>% 
+  st_transform(crs = crs_selected) %>% 
+  mutate(color = if_else(gcrmn_region == "East Asia", "#d24d57", "#89c4f4"))
+
+data_gcrmn_regions[6,] %<>% # Pacific is row number 6; note the special pipe from magrittr
+  st_buffer(1000) # To join Pacific polygons
+
+```
+
+```{r}
+
+# 1. Make the map ----
+
+plot_a <- ggplot() +
+   # Tropics
+  geom_hline(yintercept = c(2608958.17028999, 0, -2608958.17028999),
+             linetype = "dashed", col = "black", size = 0.2) +
+  # GCRMN region
+  geom_sf(data = data_gcrmn_regions, aes(fill = color), alpha = 0.3) +
+  # Site of benthic cover data
+  geom_sf(data = data_benthos, aes(color = color)) +
+  # Background map
+  geom_sf(data = data_map, size = 0.25) +
+  # Country boundaries
+  geom_sf(data = data_countries, size = 0.2) +
+  guides(colour = guide_legend(override.aes = list(size = 5))) +
+  coord_sf(ylim = c(-5000000, 5000000), expand = FALSE) +
+  theme_map() +
+  labs(title = "A") +
+  scale_color_identity() +
+  scale_fill_identity()
+
+```
+
+# Figure 1 - B
+
+```{r}
+
+# 1. Load and filter data ----
+
+data_trend <- read.csv("../data/ModelledTrends.all.sum.csv") %>% 
+  filter(Var == "Hard Coral Cover" & GCRMN_region == "Global")
+
+# 2. Make the figure ----
+
+plot_b <- ggplot(data = data_trend) +
+  geom_ribbon(aes(x = Year, ymin = .lower_0.95, ymax = .upper_0.95), 
+              alpha = 0.25, fill = "#446CB3", show.legend = FALSE) +
+  geom_ribbon(aes(x = Year, ymin = .lower_0.8, ymax = .upper_0.8), 
+              alpha = 0.5, fill = "#446cb3", show.legend = FALSE) +
+  geom_line(aes(x = Year, y = value), 
+            size = 1.2, col = "#446CB3", show.legend = FALSE) +
+  theme_graph() +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, size = 12)) +
+  labs(x = "Year", y = "Hard coral cover (%)", title = "B") +
+  lims(x = c(1975, 2020))
+
+```
+
+# Figure 1 - C
+
+```{r}
+
+# 1. Load and filter data ----
+
+data_trend <- read.csv("../data/ModelledTrends.all.sum.csv") %>% 
+  filter(Var == "Hard Coral Cover" & GCRMN_region == "East Asia")
+
+# 2. Make the figure ----
+
+plot_c <- ggplot(data = data_trend) +
+  geom_ribbon(aes(x = Year, ymin = .lower_0.95, ymax = .upper_0.95), 
+              alpha = 0.25, fill = "#d24d57", show.legend = FALSE) +
+  geom_ribbon(aes(x = Year, ymin = .lower_0.8, ymax = .upper_0.8), 
+              alpha = 0.5, fill = "#d24d57", show.legend = FALSE) +
+  geom_line(aes(x = Year, y = value), 
+            size = 1.2, col = "#d24d57", show.legend = FALSE) +
+  theme_graph() +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, size = 12)) +
+  labs(x = "Year", y = "Hard coral cover (%)", title = "C") +
+  lims(x = c(1975, 2020))
+
+```
+
+# Combine plots
+
+```{r}
+
+plot_a + (plot_b + plot_c + plot_layout(ncol = 2)) + plot_layout(nrow = 2, heights = c(0.5, 0.5))
+
+ggsave("../figs/figure-1.png", height = 6, width = 9, dpi = 600)
+
+```
+
+# Reproducibility
+
+```{r reprod}
+
+# 1. Reproducibility ----
+
+sessionInfo()
+
+```
+
+---
+Jeremy WICQUART | jeremywicquart@gmail.com | `r format(Sys.time())`
