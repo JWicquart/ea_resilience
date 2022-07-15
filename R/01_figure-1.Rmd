@@ -167,7 +167,7 @@ plot_b <- ggplot(data = data_trend) +
   theme_graph() +
   theme(strip.background = element_blank(),
         strip.text = element_text(hjust = 0, size = 12)) +
-  labs(x = "Year", y = "Hard coral cover (%)", title = "B") +
+  labs(x = "Year", y = "Hard coral cover (%)", title = "B. Global trend") +
   lims(x = c(1975, 2020))
 
 ```
@@ -193,7 +193,7 @@ plot_c <- ggplot(data = data_trend) +
   theme_graph() +
   theme(strip.background = element_blank(),
         strip.text = element_text(hjust = 0, size = 12)) +
-  labs(x = "Year", y = "Hard coral cover (%)", title = "C") +
+  labs(x = "Year", y = "Hard coral cover (%)", title = "C. East Asia trend") +
   lims(x = c(1975, 2020))
 
 ```
