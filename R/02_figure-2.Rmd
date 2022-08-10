@@ -84,7 +84,7 @@ plot_b <- ggplot(data = data_sst_anom %>% filter(gcrmn_region == "East Asia (n =
   theme_graph() +
   theme(strip.background = element_blank(),
         strip.text = element_text(hjust = 0, size = 12)) +
-  labs(x = "Year", y = "SST anomaly (°C)", title = "B. East Asia SST anomaly") +
+  labs(x = "Year", y = "SST anomaly (°C)", title = "B. East Asian Seas SST anomaly") +
   lims(y = c(-0.5, 0.7), x = c(as.Date("1985-01-01"), as.Date("2020-01-01"))) +
   scale_fill_identity()
 
