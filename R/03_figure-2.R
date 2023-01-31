@@ -3,6 +3,7 @@
 library(tidyverse)
 library(patchwork)
 library(tidytext)
+library(ggtext)
 
 # 2. Source functions ----
 
@@ -32,7 +33,7 @@ data_overall <- read.csv("data/ModelledTrends.all.sum.csv") %>%
   group_by(GCRMN_region) %>% 
   summarise_at(vars(mean, lower, upper), ~sum(.x)) %>% 
   ungroup() %>% 
-  mutate(bound = "Overall") %>% 
+  mutate(bound = "A. Overall (1996 to 2019)") %>% 
   mutate(GCRMN_region = fct_reorder(GCRMN_region, mean, .desc = TRUE))
 
 # 3.2 Mass bleaching events --
@@ -60,52 +61,38 @@ data_events <- read.csv("data/ModelledTrends.all.sum.csv") %>%
   group_by(GCRMN_region, bound) %>% 
   summarise_at(vars(mean, lower, upper), ~sum(.x)) %>% 
   ungroup() %>% 
-  mutate(bound = str_replace_all(bound, c("MBE1998" = "1998 mass bleaching event",
-                                          "MBE2010" = "2010 mass bleaching event",
-                                          "MBE2016" = "2016 mass bleaching event")))
+  mutate(bound = str_replace_all(bound, c("MBE1998" = "B. 1998 mass bleaching event",
+                                          "MBE2010" = "C. 2010 mass bleaching event",
+                                          "MBE2016" = "D. 2016 mass bleaching event")))
 
 # 3.3 Combine data --
 
 data_combined <- bind_rows(data_events, data_overall) %>% 
-  mutate(bound = fct_relevel(bound, c("Overall", 
-                                      "1998 mass bleaching event", 
-                                      "2010 mass bleaching event", 
-                                      "2016 mass bleaching event")))
+  mutate(bound = fct_relevel(bound, c("A. Overall (1996 to 2019)", 
+                                      "B. 1998 mass bleaching event", 
+                                      "C. 2010 mass bleaching event", 
+                                      "D. 2016 mass bleaching event")),
+         GCRMN_region = str_replace_all(GCRMN_region, c("Global" = "**Global**",
+                                                        "East Asia" = "<span style='color:#ec644b'>**East Asian Seas**</span>")),
+         GCRMN_region = reorder_within(GCRMN_region, mean, bound))
 
+# 4. Make the plot ----
 
-data_combined %>% 
-  filter(GCRMN_region %in% c("Global", "East Asia")) %>% 
-  ggplot(data = ., aes(x = GCRMN_region, y = mean, ymin = lower, ymax = upper)) +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    geom_pointrange(shape = 21, fill = "red", size = 1) +
-    coord_flip() +
-    labs(y = "Difference", x = NULL) +
-    facet_wrap(~bound, nrow = 1) +
-    theme_graph()
-
-data_combined %>% 
-  mutate(GCRMN_region = reorder_within(GCRMN_region, mean, bound)) %>% 
-  ggplot(data = ., aes(x = GCRMN_region, y = mean, ymin = lower, ymax = upper, group = bound)) +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    geom_pointrange(shape = 21, size = 0.75, aes(fill = if_else(str_detect(GCRMN_region, "East Asia") == TRUE, "#59abe3", "#ec644b")), show.legend = FALSE) +
-    coord_flip() +
-    scale_fill_identity() +
-    labs(y = "Absolute difference in HCC", x = NULL) +
-    facet_wrap(~bound, scales = "free_y") +
+ggplot(data = data_combined, aes(x = GCRMN_region, y = mean, ymin = lower, ymax = upper, group = bound)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_pointrange(shape = 21, size = 0.75, 
+                  aes(fill = if_else(str_detect(GCRMN_region, "East Asia") == TRUE, "#ec644b", "#59abe3")),
+                  show.legend = FALSE) +
+  coord_flip() +
+  scale_fill_identity() +
+  labs(y = "Absolute difference in HCC", x = NULL) +
+  facet_wrap(~bound, scales = "free_y") +
   scale_x_reordered() +
-    theme_graph()
+  theme_graph() +
+  theme(axis.text.y = element_markdown(),
+        strip.background = element_blank(),
+        strip.text = element_text(face = "bold", hjust = 0, size = 11))
 
+# 5. Save the plot ----
 
-ggsave("figs/figure-3.png", height = 8, width = 8, dpi = 600)
-
-
-# TEST LM
-
-data_trend <- read.csv("data/ModelledTrends.all.sum.csv") %>% 
-  filter(Var == "Hard Coral Cover") %>% 
-  filter(Year %in% 1996:2019) %>% 
-  nest(data = -GCRMN_region) %>% 
-  mutate(model = map(data, ~lm(value ~ Year, data = .)),
-         model = map(model, broom::tidy)) %>% 
-  unnest(model) %>% 
-  filter(term == "Year")
+ggsave("figs/figure-3.png", height = 6, width = 8, dpi = 600)
