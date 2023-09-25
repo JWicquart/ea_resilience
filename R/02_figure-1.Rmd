@@ -186,7 +186,7 @@ plot_b <- ggplot(data = data_trend) +
   geom_ribbon(aes(x = Year, ymin = .lower_0.8, ymax = .upper_0.8), 
               alpha = 0.5, fill = "#d24d57", show.legend = FALSE) +
   geom_line(aes(x = Year, y = value), 
-            size = 1.2, col = "#d24d57", show.legend = FALSE) +
+            linewidth = 1.2, col = "#d24d57", show.legend = FALSE) +
   theme_graph() +
   theme(strip.background = element_blank(),
         strip.text = element_text(hjust = 0, size = 12)) +
@@ -214,7 +214,7 @@ plot_c <- ggplot(data = data_trend) +
   geom_ribbon(aes(x = Year, ymin = .lower_0.8, ymax = .upper_0.8), 
               alpha = 0.5, fill = "#446cb3", show.legend = FALSE) +
   geom_line(aes(x = Year, y = value), 
-            size = 1.2, col = "#446CB3", show.legend = FALSE) +
+            linewidth = 1.2, col = "#446CB3", show.legend = FALSE) +
   theme_graph() +
   theme(strip.background = element_blank(),
         strip.text = element_text(hjust = 0, size = 12)) +
@@ -348,7 +348,7 @@ plot_a <- ggplot(data = data_trend) +
   geom_ribbon(aes(x = Year, ymin = .lower_0.8, ymax = .upper_0.8), 
               alpha = 0.5, fill = "#446cb3", show.legend = FALSE) +
   geom_line(aes(x = Year, y = value), 
-            size = 1.2, col = "#446CB3", show.legend = FALSE) +
+            linewidth = 1.2, col = "#446CB3", show.legend = FALSE) +
   theme_graph() +
   theme(strip.background = element_blank(),
         strip.text = element_text(hjust = 0, size = 12)) +

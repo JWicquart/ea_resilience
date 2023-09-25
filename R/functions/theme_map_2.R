@@ -3,12 +3,12 @@ theme_map_2 <- function(base_size = 12, base_family = font_choose_map, base_line
   half_line <- base_size/2
   
   theme(line = element_line(colour = "black", 
-                            size = base_line_size, 
+                            linewidth = base_line_size, 
                             linetype = 1, 
                             lineend = "butt"), 
         rect = element_rect(fill = "white", 
                             colour = "black", 
-                            size = base_rect_size, 
+                            linewidth = base_rect_size, 
                             linetype = 1), 
         text = element_text(family = base_family, 
                             face = "plain", 
@@ -54,7 +54,7 @@ theme_map_2 <- function(base_size = 12, base_family = font_choose_map, base_line
         legend.box.background = element_blank(), 
         legend.box.spacing = unit(2 * half_line, "pt"), 
         panel.background = element_blank(), 
-        panel.border = element_rect(size = 1, fill = NA, colour = "black"),
+        panel.border = element_rect(linewidth = 1, fill = NA, colour = "black"),
         panel.grid = element_line(colour = "#E8ECF1"), 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), 
