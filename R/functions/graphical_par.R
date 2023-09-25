@@ -17,9 +17,7 @@ col_fill_map <- "#f2caae"
 col_color_map <- "#888888"
 col_background_map <- "#e4f1fe"
 
-palette_regions <- c("#446cb3", "#3498db", "#16a085", "#26c281", 
-                     "#0db4b9", "#f2784b", "#d64541", "#af4154", 
-                     "#9b59b6", "#714d69")
+palette_regions <- c("#446cb3", "#f2784b", "#9b59b6", "#16a085", "#af4154", "#3498db", "#d64541", "#26c281", "#714d69", "#0db4b9")
 
 # 4. Define a common crs ----
 

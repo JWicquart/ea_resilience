@@ -1,14 +1,14 @@
-theme_map <- function(base_size = 12, base_family = font_choose_map, base_line_size = base_size/22, base_rect_size = base_size/22){
+theme_map_2 <- function(base_size = 12, base_family = font_choose_map, base_line_size = base_size/22, base_rect_size = base_size/22){
   
   half_line <- base_size/2
   
   theme(line = element_line(colour = "black", 
-                            linewidth = base_line_size, 
+                            size = base_line_size, 
                             linetype = 1, 
                             lineend = "butt"), 
         rect = element_rect(fill = "white", 
                             colour = "black", 
-                            linewidth = base_rect_size, 
+                            size = base_rect_size, 
                             linetype = 1), 
         text = element_text(family = base_family, 
                             face = "plain", 
@@ -42,7 +42,7 @@ theme_map <- function(base_size = 12, base_family = font_choose_map, base_line_s
         legend.key.size = unit(1.2, "lines"), 
         legend.key.height = NULL, 
         legend.key.width = NULL, 
-        legend.text = element_text(size = base_size), 
+        legend.text = element_text(size = 10), 
         legend.text.align = NULL, 
         legend.title = element_blank(), 
         legend.title.align = 0, 
@@ -54,7 +54,7 @@ theme_map <- function(base_size = 12, base_family = font_choose_map, base_line_s
         legend.box.background = element_blank(), 
         legend.box.spacing = unit(2 * half_line, "pt"), 
         panel.background = element_blank(), 
-        panel.border = element_rect(linewidth = 1, fill = NA, colour = "black"),
+        panel.border = element_rect(size = 1, fill = NA, colour = "black"),
         panel.grid = element_line(colour = "#E8ECF1"), 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), 
@@ -72,7 +72,7 @@ theme_map <- function(base_size = 12, base_family = font_choose_map, base_line_s
         strip.switch.pad.grid = unit(half_line/2, "pt"), 
         strip.switch.pad.wrap = unit(half_line/2, "pt"), 
         plot.background = element_rect(fill = "white", color = NA), 
-        plot.title = element_text(size = rel(1.2), hjust = 0, vjust = 1, margin = margin(b = half_line)), 
+        plot.title = element_text(size = rel(1.2), hjust = 0.5, vjust = 1, margin = margin(b = half_line)), 
         plot.subtitle = element_text(hjust = 0, vjust = 1, margin = margin(b = half_line)), 
         plot.caption = element_text(size = rel(0.8), hjust = 1, vjust = 1, margin = margin(t = half_line)), 
         plot.tag = element_text(size = rel(1.2), hjust = 0.5, vjust = 0.5), 
