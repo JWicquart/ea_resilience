@@ -44,7 +44,9 @@ crs_selected <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=160 +x_0=0 +y_0=0 +datum=WG
 
 ```
 
-# Figure A - Map
+# Figure 1
+
+## Subfig. A (map)
 
 ```{r}
 
@@ -89,7 +91,7 @@ load("../data/gcrmn_regions.RData")
 
 # 6.2 Benthic cover synthetic dataset --
 
-gcrmn_path <- "C:/Users/jwicquart/Desktop/Recherche/03_projects/2019-07-08_gcrmn_2020/GCRMN_2020/data/"
+gcrmn_path <- "C:/Users/jwicquart/Desktop/Recherche/03_projects/2021-07-21_monitoring_reefs/monitoring_reefs/data/"
 
 data_benthos <- read.csv2(paste0(gcrmn_path, "03-merge_all_all_all_benthos_NA.csv"), stringsAsFactors = TRUE) %>% 
   filter(!(DatasetID %in% c("XLCA1", "XLCA2", "XLCA3", "XLCA4", "XLCA5",
@@ -120,6 +122,25 @@ data_gcrmn_regions <- data_gcrmn_regions %>%
 data_gcrmn_regions[6,] %<>% # Pacific is row number 6; note the special pipe from magrittr
   st_buffer(1000) # To join Pacific polygons
 
+# 8. Create the tropics ----
+
+data_tropics <- tibble(long = c(-180, 180, -180, 180, -180, 180), 
+                       lat = c(0, 0, 23.43656, 23.43656, -23.43656, -23.43656), 
+                       tropic = c("Equator", "Equator", "Tropic of Cancer", "Tropic of Cancer",
+                                  "Tropic of Capricorne", "Tropic of Capricorne")) %>% 
+  st_as_sf(coords = c("long", "lat"), crs = 4326) %>% 
+  group_by(tropic) %>% 
+  summarise() %>% 
+  st_cast("LINESTRING") %>% 
+  st_difference(correction_polygon) %>% 
+  st_transform(crs_selected)
+
+data_tropics_no_overlap <- st_intersection(data_tropics, data_gcrmn_regions)
+
+data_tropics_no_overlap$var <- "true"
+
+data_tropics_no_overlap <- st_difference(data_tropics, st_union(st_geometry(data_tropics_no_overlap)))
+
 ```
 
 ```{r}
@@ -127,9 +148,8 @@ data_gcrmn_regions[6,] %<>% # Pacific is row number 6; note the special pipe fro
 # 1. Make the map ----
 
 plot_a <- ggplot() +
-   # Tropics
-  geom_hline(yintercept = c(2608958.17028999, 0, -2608958.17028999),
-             linetype = "dashed", col = "black", size = 0.2) +
+  # Tropics
+  geom_sf(data = data_tropics_no_overlap, linetype = "dashed", color = "#363737", linewidth = 0.25) +
   # GCRMN region
   geom_sf(data = data_gcrmn_regions, aes(fill = color), alpha = 0.3) +
   # Site of benthic cover data
@@ -148,37 +168,7 @@ plot_a <- ggplot() +
 
 ```
 
-# Hard Coral Cover
-
-## Figure B
-
-```{r}
-
-# 1. Load and filter data ----
-
-data_trend <- read.csv("../data/ModelledTrends.all.sum.csv") %>% 
-  filter(Var == "Hard Coral Cover" & GCRMN_region == "Global")
-
-# 2. Make the figure ----
-
-plot_b <- ggplot(data = data_trend) +
-  geom_vline(xintercept = c(1998, 2010, 2016), linetype = "dashed") +
-  geom_ribbon(aes(x = Year, ymin = .lower_0.95, ymax = .upper_0.95), 
-              alpha = 0.25, fill = "#446CB3", show.legend = FALSE) +
-  geom_ribbon(aes(x = Year, ymin = .lower_0.8, ymax = .upper_0.8), 
-              alpha = 0.5, fill = "#446cb3", show.legend = FALSE) +
-  geom_line(aes(x = Year, y = value), 
-            size = 1.2, col = "#446CB3", show.legend = FALSE) +
-  theme_graph() +
-  theme(strip.background = element_blank(),
-        strip.text = element_text(hjust = 0, size = 12)) +
-  labs(x = NULL, y = "Hard coral cover (%)", title = "<b>B.</b> Global") +
-  lims(x = c(1975, 2020)) +
-  theme(plot.title = element_markdown())
-
-```
-
-## Figure C
+## Subfig. B (HCC)
 
 ```{r}
 
@@ -189,7 +179,7 @@ data_trend <- read.csv("../data/ModelledTrends.all.sum.csv") %>%
 
 # 2. Make the figure ----
 
-plot_c <- ggplot(data = data_trend) +
+plot_b <- ggplot(data = data_trend) +
   geom_vline(xintercept = c(1998, 2010, 2016), linetype = "dashed") +
   geom_ribbon(aes(x = Year, ymin = .lower_0.95, ymax = .upper_0.95), 
               alpha = 0.25, fill = "#d24d57", show.legend = FALSE) +
@@ -200,13 +190,41 @@ plot_c <- ggplot(data = data_trend) +
   theme_graph() +
   theme(strip.background = element_blank(),
         strip.text = element_text(hjust = 0, size = 12)) +
-  labs(x = NULL, y = "Hard coral cover (%)", title = "<b>C.</b> East Asian Seas") +
+  labs(x = NULL, y = "Hard coral cover (%)", title = "<b>B.</b> East Asian Seas") +
   lims(x = c(1975, 2020)) +
   theme(plot.title = element_markdown())
 
 ```
 
-# SST anomaly
+## Subfig. C (HCC)
+
+```{r}
+
+# 1. Load and filter data ----
+
+data_trend <- readRDS("../data/GlobalTrend_sans_EastAsia.RData")$data %>% 
+  mutate(across(c("value", ".lower_0.8", ".lower_0.95", ".upper_0.8", ".upper_0.95"), ~.x*100))
+
+# 2. Make the figure ----
+
+plot_c <- ggplot(data = data_trend) +
+  geom_vline(xintercept = c(1998, 2010, 2016), linetype = "dashed") +
+  geom_ribbon(aes(x = Year, ymin = .lower_0.95, ymax = .upper_0.95), 
+              alpha = 0.25, fill = "#446CB3", show.legend = FALSE) +
+  geom_ribbon(aes(x = Year, ymin = .lower_0.8, ymax = .upper_0.8), 
+              alpha = 0.5, fill = "#446cb3", show.legend = FALSE) +
+  geom_line(aes(x = Year, y = value), 
+            size = 1.2, col = "#446CB3", show.legend = FALSE) +
+  theme_graph() +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, size = 12)) +
+  labs(x = NULL, y = "Hard coral cover (%)", title = "<b>C.</b> Other regions") +
+  lims(x = c(1975, 2020)) +
+  theme(plot.title = element_markdown())
+
+```
+
+## Figure D (SSTa)
 
 ```{r}
 
@@ -237,57 +255,58 @@ data_sst_anom <- data_benthos %>%
 
 ```
 
-## Figure E
+```{r}
+
+# 1. Make the plot ----
+
+plot_d <- data_sst_anom %>% 
+  filter(gcrmn_region == "East Asia (n = 2,877)") %>% 
+  ggplot(data = ., aes(x = date, y = sst_anomaly_mean)) +
+    geom_vline(xintercept = c(as.Date("1998-06-01"), 
+                              as.Date("2010-06-01"), 
+                              as.Date("2016-01-01")), linetype = "dashed") +
+    geom_ribbon(aes(ymin = 0, ymax = sst_anomaly_mean), fill = "#d24d57", alpha = 0.5) +
+    geom_path(linewidth = 0.4) +
+    theme_graph() +
+    theme(strip.background = element_blank(),
+          strip.text = element_text(hjust = 0, size = 12)) +
+    labs(x = "Year", y = "SST anomaly (°C)", title = "<b>D.</b> East Asian Seas") +
+    lims(y = c(-0.5, 0.7), x = c(as.Date("1975-01-01"), as.Date("2020-01-01"))) +
+    scale_fill_identity() +
+    theme(plot.title = element_markdown())
+
+```
+
+## Figure E (SSTa)
 
 ```{r}
 
 # 1. Make the plot ----
 
-plot_e <- ggplot(data = data_sst_anom %>% filter(gcrmn_region == "East Asia (n = 2,877)"), 
-                 aes(x = date, y = sst_anomaly_mean)) +
-  geom_vline(xintercept = c(as.Date("1998-06-01"), as.Date("2010-06-01"), as.Date("2016-01-01")), linetype = "dashed") +
-  geom_ribbon(aes(ymin = 0, ymax = sst_anomaly_mean), fill = "#d24d57", alpha = 0.5) +
-  geom_path(linewidth = 0.5) +
-  theme_graph() +
-  theme(strip.background = element_blank(),
-        strip.text = element_text(hjust = 0, size = 12)) +
-  labs(x = "Year", y = "SST anomaly (°C)", title = "<b>E.</b> East Asian Seas") +
-  lims(y = c(-0.5, 0.7), x = c(as.Date("1975-01-01"), as.Date("2020-01-01"))) +
-  scale_fill_identity() +
-  theme(plot.title = element_markdown())
-
-```
-
-## Figure D
-
-```{r}
-
-# 1. Transform the data ----
-
-data_sst_anom <- data_sst_anom %>% 
+plot_e <- data_sst_anom %>% 
+  filter(gcrmn_region != "East Asia (n = 2,877)") %>% 
   group_by(date) %>% 
   summarise(sst_anomaly_mean = mean(sst_anomaly_mean)) %>% 
   ungroup() %>% 
-  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#ec644b", "#59abe3"))
-
-# 2. Make the plot ----
-
-plot_d <- ggplot(data = data_sst_anom, aes(x = date, y = sst_anomaly_mean)) +
-  geom_vline(xintercept = c(as.Date("1998-06-01"), as.Date("2010-06-01"), as.Date("2016-01-01")), linetype = "dashed") +
-  geom_ribbon(aes(ymin = 0, ymax = sst_anomaly_mean), fill = "#446CB3", alpha = 0.5) +
-  geom_path(linewidth = 0.5) +
-  theme_graph() +
-  labs(x = "Year", 
-       y = "SST anomaly (°C)", 
-       title = "<b>D.</b> Global") +
-  lims(y = c(-0.5, 0.7), x = c(as.Date("1975-01-01"), as.Date("2020-01-01"))) +
-  scale_fill_identity() +
-  theme(plot.title = element_markdown())
+  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#ec644b", "#59abe3")) %>% 
+  ggplot(data = ., aes(x = date, y = sst_anomaly_mean)) +
+    geom_vline(xintercept = c(as.Date("1998-06-01"), 
+                              as.Date("2010-06-01"), 
+                              as.Date("2016-01-01")), linetype = "dashed") +
+    geom_ribbon(aes(ymin = 0, ymax = sst_anomaly_mean), fill = "#446CB3", alpha = 0.5) +
+    geom_path(linewidth = 0.4) +
+    theme_graph() +
+    labs(x = "Year", 
+         y = "SST anomaly (°C)", 
+         title = "<b>E.</b> Other regions") +
+    lims(y = c(-0.5, 0.7), x = c(as.Date("1975-01-01"), as.Date("2020-01-01"))) +
+    scale_fill_identity() +
+    theme(plot.title = element_markdown())
 
 ```
 
-# Combine plots
-
+## Combine plots
+ 
 ```{r}
 
 # 1. Create the layout ----
@@ -306,6 +325,75 @@ plot_a + plot_b + plot_c + plot_d + plot_e +
 # 3. Save the plot ----
 
 ggsave("../figs/figure-1.png", height = 8, width = 9, dpi = 600)
+
+```
+
+# Supp. Fig. (global)
+
+## Subfig. A (HCC)
+
+```{r}
+
+# 1. Load and filter data ----
+
+data_trend <- read.csv("../data/ModelledTrends.all.sum.csv") %>% 
+  filter(Var == "Hard Coral Cover" & GCRMN_region == "Global")
+
+# 2. Make the figure ----
+
+plot_a <- ggplot(data = data_trend) +
+  geom_vline(xintercept = c(1998, 2010, 2016), linetype = "dashed") +
+  geom_ribbon(aes(x = Year, ymin = .lower_0.95, ymax = .upper_0.95), 
+              alpha = 0.25, fill = "#446CB3", show.legend = FALSE) +
+  geom_ribbon(aes(x = Year, ymin = .lower_0.8, ymax = .upper_0.8), 
+              alpha = 0.5, fill = "#446cb3", show.legend = FALSE) +
+  geom_line(aes(x = Year, y = value), 
+            size = 1.2, col = "#446CB3", show.legend = FALSE) +
+  theme_graph() +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, size = 12)) +
+  labs(x = NULL, y = "Hard coral cover (%)", title = "<b>A</b>") +
+  lims(x = c(1975, 2020)) +
+  theme(plot.title = element_markdown())
+
+```
+
+## Subfig. B (SSTa)
+
+```{r}
+
+plot_b <- data_sst_anom %>% 
+  group_by(date) %>% 
+  summarise(sst_anomaly_mean = mean(sst_anomaly_mean)) %>% 
+  ungroup() %>% 
+  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#ec644b", "#59abe3")) %>% 
+  ggplot(data = ., aes(x = date, y = sst_anomaly_mean)) +
+    geom_vline(xintercept = c(as.Date("1998-06-01"), 
+                              as.Date("2010-06-01"), 
+                              as.Date("2016-01-01")), linetype = "dashed") +
+    geom_ribbon(aes(ymin = 0, ymax = sst_anomaly_mean), fill = "#446CB3", alpha = 0.5) +
+    geom_path(linewidth = 0.5) +
+    theme_graph() +
+    labs(x = "Year", 
+         y = "SST anomaly (°C)", 
+         title = "<b>B</b>") +
+    lims(y = c(-0.5, 0.7), x = c(as.Date("1975-01-01"), as.Date("2020-01-01"))) +
+    scale_fill_identity() +
+    theme(plot.title = element_markdown())
+
+```
+
+## Combine plots
+
+```{r}
+
+# 1. Combine plots ----
+
+plot_a + plot_b + plot_layout(ncol = 1)
+
+# 2. Save the plot ----
+
+ggsave("../figs/supp-fig-2.png", height = 7, width = 6, dpi = 600)
 
 ```
 
