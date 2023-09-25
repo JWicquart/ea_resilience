@@ -7,8 +7,8 @@ sf_use_s2(FALSE) # Switch from S2 to GEOS
 
 # 2. Source functions ----
 
-source("R/functions/graphical_par.R")
-source("R/functions/theme_map_2.R")
+source("code/functions/graphical_par.R")
+source("code/functions/theme_map_2.R")
 
 # 3. Define the CRS ----
 
@@ -122,4 +122,4 @@ ggplot() +
 
 # 9. Save the figure ----
 
-ggsave("figs/fig-5.png", width = 7, height = 3, dpi = 600)
+ggsave("figs/figure-3.png", width = 7, height = 3, dpi = 600)
