@@ -35,8 +35,8 @@ source("functions/transform_for_ribbon.R")
 library(tidyverse)
 library(magrittr)
 library(sf)
-library(patchwork)
 sf_use_s2(FALSE) # Switch from S2 to GEOS
+library(patchwork)
 library(ggtext)
 
 # 3. Define the CRS ----
