@@ -118,7 +118,7 @@ data_benthos <- read.csv2(paste0(gcrmn_path, "03-merge_all_all_all_benthos_NA.cs
 
 data_gcrmn_regions <- data_gcrmn_regions %>% 
   st_transform(crs = crs_selected) %>% 
-  mutate(color = if_else(gcrmn_region == "EAS", "#d24d57", "#89c4f4"))
+  mutate(color = if_else(gcrmn_region == "EAS", "#d24d57", "#446CB3"))
 
 data_gcrmn_regions[7,] %<>% # Pacific is row number 7; note the special pipe from magrittr
   st_buffer(1000) # To join Pacific polygons
@@ -221,7 +221,7 @@ load("../data/sst_anomaly.RData")
 data_sst_anom <- data_sst_anom %>% 
   drop_na(sst_anomaly_mean) %>% 
   filter(date < as.Date("2020-01-01")) %>% 
-  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#d24d57", "#59abe3"))
+  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#d24d57", "#446CB3"))
 
 # 1.2 Add number of sites per GCRMN region --
 
@@ -272,7 +272,7 @@ plot_e <- data_sst_anom %>%
   group_by(date) %>% 
   summarise(sst_anomaly_mean = mean(sst_anomaly_mean)) %>% 
   ungroup() %>% 
-  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#d24d57", "#59abe3")) %>% 
+  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#d24d57", "#446CB3")) %>% 
   ggplot(data = ., aes(x = date, y = sst_anomaly_mean)) +
     geom_vline(xintercept = c(as.Date("1998-06-01"), 
                               as.Date("2010-06-01"), 
