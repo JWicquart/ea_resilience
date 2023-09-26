@@ -14,7 +14,7 @@ source("code/functions/transform_for_ribbon.R")
 
 # 3.1 Load data --
 
-data_trend <- read.csv("data/ModelledTrends.all.sum.csv") %>% 
+data_trend <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>% 
   filter(Var == "Hard Coral Cover" & GCRMN_region == "Global")
 
 # 3.2 Make the figure --
@@ -29,7 +29,7 @@ plot_a <- transform_for_ribbon(data = data_trend,
 
 # 4.1 Load data --
 
-load("data/sst_anomaly.RData")
+load("data/04_sst/sst_anomaly.RData")
 
 # 4.2 Make the figure --
 

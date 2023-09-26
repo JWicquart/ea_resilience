@@ -14,7 +14,7 @@ source("code/functions/theme_graph.R")
 
 # 3.1 Overall trend --
 
-data_overall <- read.csv("data/ModelledTrends.all.sum.csv") %>% 
+data_overall <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>% 
   filter(Var == "Hard Coral Cover") %>% 
   filter(Year %in% 1996:2019) %>% 
   rename(mean = value,
@@ -38,7 +38,7 @@ data_overall <- read.csv("data/ModelledTrends.all.sum.csv") %>%
 
 # 3.2 Mass bleaching events --
 
-data_events <- read.csv("data/ModelledTrends.all.sum.csv") %>% 
+data_events <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>% 
   filter(Var == "Hard Coral Cover") %>% 
   rename(mean = value,
          upper = .upper_0.8,
@@ -79,13 +79,15 @@ data_combined <- bind_rows(data_events, data_overall) %>%
 # 4. Make the plot ----
 
 ggplot(data = data_combined, aes(x = GCRMN_region, y = mean, group = bound)) +
+  geom_segment(aes(yend = 0, xend = GCRMN_region, 
+                   color = if_else(str_detect(GCRMN_region, "East Asia") == TRUE, "#d24d57", "#446CB3")),
+               show.legend = FALSE) +
   geom_hline(yintercept = 0, linewidth = 0.4) +
-  geom_segment(aes(yend = 0, xend = GCRMN_region)) +
-  geom_point(shape = 21, size = 3, color = "white",
-             aes(fill = if_else(str_detect(GCRMN_region, "East Asia") == TRUE, "#d24d57", "#446CB3")),
-             show.legend = FALSE) +
+  geom_point(aes(fill = if_else(str_detect(GCRMN_region, "East Asia") == TRUE, "#d24d57", "#446CB3")),
+             shape = 21, size = 3, color = "white", show.legend = FALSE) +
   coord_flip() +
   scale_fill_identity() +
+  scale_color_identity() +
   labs(y = "Absolute difference in HCC (%)", x = NULL) +
   facet_wrap(~bound, scales = "free_y") +
   scale_x_reordered() +

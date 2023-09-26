@@ -8,7 +8,8 @@ sf_use_s2(FALSE) # Switch from S2 to GEOS
 # 2. Source functions ----
 
 source("code/functions/graphical_par.R")
-source("code/functions/theme_map_2.R")
+source("code/functions/theme_map.R")
+source("code/functions/data_cleaning.R")
 
 # 3. Define the CRS ----
 
@@ -18,7 +19,7 @@ crs_selected <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=160 +x_0=0 +y_0=0 +datum=WG
 
 # 4.1 Load shapefile --
 
-data_map <- read_sf("data/00_natural-earth-data/ne_10m_land/ne_10m_land.shp") %>% 
+data_map <- read_sf("data/00_shapefiles/ne_10m_land/ne_10m_land.shp") %>% 
   st_transform(crs = 4326)
 
 # 4.2 Define the offset --
@@ -43,7 +44,7 @@ data_map <- data_map %>%
 
 # 5. Load country boundaries data ----
 
-data_countries <- read_sf("data/00_natural-earth-data/ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp") %>% 
+data_countries <- read_sf("data/00_shapefiles/ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp") %>% 
   st_transform(crs = 4326) %>% 
   st_transform(crs = crs_selected)
 
@@ -51,30 +52,12 @@ data_countries <- read_sf("data/00_natural-earth-data/ne_10m_admin_0_countries/n
 
 # 6.1 GCRMN regions --
 
-load("data/gcrmn_regions.RData")
+load("data/00_shapefiles/gcrmn_regions.RData")
 
 # 6.2 Benthic cover synthetic dataset --
 
-gcrmn_path <- "C:/Users/jwicquart/Desktop/Recherche/03_projects/2021-07-21_monitoring_reefs/monitoring_reefs/data/"
-
-data_benthos <- read.csv2(paste0(gcrmn_path, "03-merge_all_all_all_benthos_NA.csv"), stringsAsFactors = TRUE) %>% 
-  filter(!(DatasetID %in% c("XLCA1", "XLCA2", "XLCA3", "XLCA4", "XLCA5",
-                            "PACN1.1", "PACN1.2", "PACN1.3", "PACN1.4",
-                            "TIAH1", "RFCK1"))) %>% # Remove datasets unused by Murray for the analyses
-  # Sites with incorrect position (not corrected during QAQC)
-  filter(!(Longitude %in% c(33.50138889, 52.7500, 50.71666667))) %>% 
-  filter(!(Site %in% c("34.26.62E.28.51.79S", "34.41.08E.27.31.66S", "NSIslandsSouth", 
-                       "29N34E4", "34.4.4.97E.29.7.39.89N", "34.26.013E.28.26.151N", "34.18.5E27.54.8N"))) %>% 
-  mutate(Date = as.Date(Date)) %>% 
-  select(Latitude, Longitude) %>% 
-  drop_na(Latitude, Longitude) %>% 
-  distinct() %>% 
-  st_as_sf(., coords = c("Longitude", "Latitude"), crs = 4326) %>% 
-  # Add gcrmn_region using a spatial join
-  st_intersection(., data_gcrmn_regions) %>% 
-  # Remove point falling outside gcrmn_regions polygon
-  drop_na(gcrmn_region) %>% 
-  st_transform(crs = crs_selected)
+data_benthos <- read.csv2("data/01_benthic-data/03-merge_all_all_all_benthos_NA.csv", stringsAsFactors = TRUE) %>% 
+  data_cleaning(data = .)
 
 data_gcrmn_regions <- data_gcrmn_regions %>% 
   st_transform(crs = crs_selected)
@@ -114,9 +97,9 @@ ggplot() +
   geom_sf(data = data_map, size = 0.25) +
   # Country boundaries
   geom_sf(data = data_countries, size = 0.2) +
-  guides(colour = guide_legend(override.aes = list(size = 5))) +
   coord_sf(ylim = c(-5000000, 5000000), expand = FALSE) +
-  theme_map_2() +
+  theme_map() +
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
   scale_color_manual(values = palette_regions) +
   scale_fill_manual(values = palette_regions)
 

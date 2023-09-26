@@ -42,7 +42,7 @@ theme_map <- function(base_size = 12, base_family = font_choose_map, base_line_s
         legend.key.size = unit(1.2, "lines"), 
         legend.key.height = NULL, 
         legend.key.width = NULL, 
-        legend.text = element_text(size = base_size), 
+        legend.text = element_text(size = 10), 
         legend.text.align = NULL, 
         legend.title = element_blank(), 
         legend.title.align = 0, 

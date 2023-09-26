@@ -12,7 +12,7 @@ source("code/functions/transform_for_ribbon.R")
 
 # 3. Load data ----
 
-data_trend <- read.csv("data/ModelledTrends.all.sum.csv") %>% 
+data_trend <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>% 
   filter(Var == "Hard Coral Cover" & GCRMN_region != "Global") %>% 
   mutate(GCRMN_region = str_replace_all(GCRMN_region, "East Asia", "East Asian Seas"))
 
