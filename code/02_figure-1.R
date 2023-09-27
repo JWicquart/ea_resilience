@@ -142,72 +142,43 @@ plot_c <- transform_for_ribbon(data = data_trend, region = "Other regions",
   geom_vline(xintercept = c(1998.6, 2010.6, 2016.0), linetype = "dashed") +
   lims(x = c(1975, 2020))
 
-# 6. Subfigure D (SSTa) ----
+# 6. Subfigure D (DHW) ----
 
-## 6.1 Load and transform data ----
+load("data/04_dhw/data_dhw_percent.RData")
 
-# SST anomaly data --
+plot_d <- data_dhw_percent %>% 
+  filter(region == "EAS") %>%
+  filter(dhw_type != "DHW = 0") %>% 
+  mutate(dhw_type = as.factor(dhw_type)) %>% 
+  ggplot(data = ., aes(x = date, y = freq, fill = dhw_type)) +
+    geom_area(stat = "identity", position = "identity") +
+    scale_y_continuous(limits = c(0, 110), breaks = c(0, 25, 50, 75, 100)) +
+    scale_fill_manual(breaks = c("0 < DHW < 4", "4 <= DHW < 8", "DHW >= 8"), 
+                      values = c("#2c82c9", "#fabe58", "#d64541"), name = NULL) +
+    labs(x = "Year", y = "Sites (%)", title = "<b>D.</b> East Asian Seas") +
+    theme_graph() +
+    theme(legend.direction = "horizontal",
+          legend.position = c(0.5, 0.925),
+          plot.title = element_markdown(size = rel(1)),
+          legend.background = element_blank())
 
-load("data/04_sst/sst_anomaly.RData")
+# 7. Subfigure E (DHW) ----
 
-data_sst_anom <- data_sst_anom %>% 
-  drop_na(sst_anomaly_mean) %>% 
-  filter(date < as.Date("2020-01-01")) %>% 
-  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#d24d57", "#446CB3"))
-
-# Add number of sites per GCRMN region --
-
-load("data/site_coordinates.RData")
-
-data_sst_anom <- data_benthos %>% 
-  st_drop_geometry() %>% 
-  group_by(gcrmn_region) %>% 
-  count() %>% 
-  mutate(n = as.character(n),
-         n = ifelse(nchar(n) == 4, paste0(substr(n, 1, 1), ",", substr(n, 2, 4)), n)) %>% 
-  ungroup() %>% 
-  left_join(data_sst_anom, .) %>% 
-  mutate(gcrmn_region = paste0(gcrmn_region, " (n = ", n, ")"))
-
-## 6.2 Make the plot ----
-
-plot_d <- data_sst_anom %>% 
-  filter(gcrmn_region == "East Asia (n = 2,877)") %>% 
-  ggplot(data = ., aes(x = date, y = sst_anomaly_mean)) +
-  geom_vline(xintercept = c(as.Date("1998-06-01"), 
-                            as.Date("2010-06-01"), 
-                            as.Date("2016-01-01")), linetype = "dashed") +
-  geom_ribbon(aes(ymin = 0, ymax = sst_anomaly_mean), fill = "#d24d57", alpha = 0.5) +
-  geom_path(linewidth = 0.4) +
-  theme(strip.background = element_blank(),
-        strip.text = element_text(hjust = 0, size = 12)) +
-  labs(x = "Year", y = "SST anomaly (°C)", title = "<b>D.</b> East Asian Seas") +
-  lims(y = c(-0.5, 0.7), x = c(as.Date("1975-01-01"), as.Date("2020-01-01"))) +
-  scale_fill_identity() +
+plot_e <- data_dhw_percent %>% 
+  filter(region == "All") %>%
+  filter(dhw_type != "DHW = 0") %>% 
+  mutate(dhw_type = as.factor(dhw_type)) %>% 
+  ggplot(data = ., aes(x = date, y = freq, fill = dhw_type)) +
+  geom_area(stat = "identity", position = "identity") +
+  scale_y_continuous(limits = c(0, 110), breaks = c(0, 25, 50, 75, 100)) +
+  scale_fill_manual(breaks = c("0 < DHW < 4", "4 <= DHW < 8", "DHW >= 8"), 
+                    values = c("#2c82c9", "#fabe58", "#d64541"), name = NULL) +
+  labs(x = "Year", y = "Sites (%)", title = "<b>E.</b> Other regions") +
   theme_graph() +
-  theme(plot.title = element_markdown(size = rel(1)))
-
-# 7. Subfigure E (SSTa) ----
-
-plot_e <- data_sst_anom %>% 
-  filter(gcrmn_region != "East Asia (n = 2,877)") %>% 
-  group_by(date) %>% 
-  summarise(sst_anomaly_mean = mean(sst_anomaly_mean)) %>% 
-  ungroup() %>% 
-  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#d24d57", "#446CB3")) %>% 
-  ggplot(data = ., aes(x = date, y = sst_anomaly_mean)) +
-  geom_vline(xintercept = c(as.Date("1998-06-01"), 
-                            as.Date("2010-06-01"), 
-                            as.Date("2016-01-01")), linetype = "dashed") +
-  geom_ribbon(aes(ymin = 0, ymax = sst_anomaly_mean), fill = "#446CB3", alpha = 0.5) +
-  geom_path(linewidth = 0.4) +
-  labs(x = "Year", 
-       y = "SST anomaly (°C)", 
-       title = "<b>E.</b> Other regions") +
-  lims(y = c(-0.5, 0.7), x = c(as.Date("1975-01-01"), as.Date("2020-01-01"))) +
-  scale_fill_identity() +
-  theme_graph() +
-  theme(plot.title = element_markdown(size = rel(1)))
+  theme(legend.direction = "horizontal",
+        legend.position = c(0.5, 0.925),
+        plot.title = element_markdown(size = rel(1)),
+        legend.background = element_blank())
 
 # 8. Combine the plots ----
 
