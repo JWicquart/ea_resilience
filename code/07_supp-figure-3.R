@@ -45,7 +45,6 @@ plot_a <- data_benthos %>%
     labs(x = "Year", y = "Percentage of surveys", title = "A") +
     theme(plot.title = element_markdown(size = rel(1)))
 
-
 # 5. Make the plot of number of surveys per depth ----
 
 plot_b <- data_benthos %>% 

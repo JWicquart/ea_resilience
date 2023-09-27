@@ -165,7 +165,7 @@ plot_d <- data_dhw_percent %>%
 # 7. Subfigure E (DHW) ----
 
 plot_e <- data_dhw_percent %>% 
-  filter(region == "All") %>%
+  filter(region == "Other regions") %>%
   filter(dhw_type != "DHW = 0") %>% 
   mutate(dhw_type = as.factor(dhw_type)) %>% 
   ggplot(data = ., aes(x = date, y = freq, fill = dhw_type)) +

@@ -25,32 +25,25 @@ plot_a <- transform_for_ribbon(data = data_trend,
   geom_vline(xintercept = c(1998.6, 2010.6, 2016.0), linetype = "dashed") +
   lims(x = c(1975, 2020))
 
-# 4. Global trend (SSTa) ----
+# 4. Global trend (DHW) ----
 
-# 4.1 Load data --
+load("data/04_dhw/data_dhw_percent.RData")
 
-load("data/04_sst/sst_anomaly.RData")
-
-# 4.2 Make the figure --
-
-plot_b <- data_sst_anom %>% 
-  group_by(date) %>% 
-  summarise(sst_anomaly_mean = mean(sst_anomaly_mean)) %>% 
-  ungroup() %>% 
-  mutate(sst_anomaly_type = ifelse(sst_anomaly_mean > 0,"#ec644b", "#59abe3")) %>% 
-  ggplot(data = ., aes(x = date, y = sst_anomaly_mean)) +
-  geom_vline(xintercept = c(as.Date("1998-06-01"), 
-                            as.Date("2010-06-01"), 
-                            as.Date("2016-01-01")), linetype = "dashed") +
-  geom_ribbon(aes(ymin = 0, ymax = sst_anomaly_mean), fill = "#446CB3", alpha = 0.5) +
-  geom_path(linewidth = 0.5) +
+plot_b <- data_dhw_percent %>% 
+  filter(region == "All") %>%
+  filter(dhw_type != "DHW = 0") %>% 
+  mutate(dhw_type = as.factor(dhw_type)) %>% 
+  ggplot(data = ., aes(x = date, y = freq, fill = dhw_type)) +
+  geom_area(stat = "identity", position = "identity") +
+  scale_y_continuous(limits = c(0, 110), breaks = c(0, 25, 50, 75, 100)) +
+  scale_fill_manual(breaks = c("0 < DHW < 4", "4 <= DHW < 8", "DHW >= 8"), 
+                    values = c("#2c82c9", "#fabe58", "#d64541"), name = NULL) +
+  labs(x = "Year", y = "Sites (%)", title = "<b>B</b>") +
   theme_graph() +
-  labs(x = "Year", 
-       y = "SST anomaly (°C)", 
-       title = "<b>B</b>") +
-  lims(y = c(-0.5, 0.7), x = c(as.Date("1975-01-01"), as.Date("2020-01-01"))) +
-  scale_fill_identity() +
-  theme(plot.title = element_markdown(size = rel(1)))
+  theme(legend.direction = "horizontal",
+        legend.position = c(0.5, 0.925),
+        plot.title = element_markdown(size = rel(1)),
+        legend.background = element_blank())
 
 # 5. Combine plots ----
 
