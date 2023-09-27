@@ -55,7 +55,7 @@ plot_b <- data_benthos %>%
     geom_histogram(binwidth = 1, aes(y = after_stat(width * density * 100)),
                    color = "white", fill = col_color_graph) +
     theme_graph() +
-    labs(x = "Depth", y = "Percentage of surveys", title = "B") +
+    labs(x = "Depth (m)", y = "Percentage of surveys", title = "B") +
     lims(x = c(0, 40)) +
     theme(plot.title = element_markdown(size = rel(1)))
 

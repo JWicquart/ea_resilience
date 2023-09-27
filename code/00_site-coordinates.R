@@ -15,5 +15,5 @@ data_benthos <- read.csv2("data/01_benthic-data/03-merge_all_all_all_benthos_NA.
   data_cleaning(data = .) %>% 
   st_transform(crs = 4326) %>% 
   mutate(site_id = row_number(.)) %>% 
-  select(-gcrmn_region) %>% 
+  rename(region = gcrmn_region) %>% 
   st_write(., dsn = "data/02_site-coords/ea_resilience_site-coords.shp", delete_dsn = TRUE)

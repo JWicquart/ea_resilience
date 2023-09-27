@@ -32,4 +32,4 @@ wrap_plots(data_plots) + plot_layout(ncol = 2)
 
 # 6. Save the plot ----
 
-ggsave("figs/supp-fig-2.png", height = 14, width = 7.5, dpi = 600)
+ggsave("figs/supp-fig-2.png", height = 14, width = 9, dpi = 600)
