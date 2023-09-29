@@ -43,7 +43,8 @@ plot_b <- data_dhw_percent %>%
   theme(legend.direction = "horizontal",
         legend.position = c(0.5, 0.925),
         plot.title = element_markdown(size = rel(1)),
-        legend.background = element_blank())
+        legend.background = element_blank()) +
+  lims(x = c(as_date("1975-01-01"), as_date("2020-01-01")))
 
 # 5. Combine plots ----
 
