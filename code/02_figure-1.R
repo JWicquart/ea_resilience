@@ -123,7 +123,7 @@ data_trend <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>%
 plot_b <- transform_for_ribbon(data = data_trend, region = "East Asia",
                                title = FALSE, ribbon_color = "#d24d57",
                                title_name = "<b>B.</b> East Asian Seas") +
-  geom_vline(xintercept = c(1998.6, 2010.6, 2016.0), linetype = "dashed") +
+  geom_vline(xintercept = c(1998.6, 2010.6, 2016.0), linetype = "dashed", linewidth = 0.35) +
   lims(x = c(1975, 2020))
 
 # 5. Subfigure C (HCC) ----
@@ -139,7 +139,7 @@ data_trend <- readRDS("data/03_modelled-data/GlobalTrend_sans_EastAsia.RData")$d
 plot_c <- transform_for_ribbon(data = data_trend, region = "Other regions",
                                title = FALSE, ribbon_color = "#446CB3",
                                title_name = "<b>C.</b> Other regions") +
-  geom_vline(xintercept = c(1998.6, 2010.6, 2016.0), linetype = "dashed") +
+  geom_vline(xintercept = c(1998.6, 2010.6, 2016.0), linetype = "dashed", linewidth = 0.35) +
   lims(x = c(1975, 2020))
 
 # 6. Subfigure D (DHW) ----
@@ -151,17 +151,23 @@ plot_d <- data_dhw_percent %>%
   filter(dhw_type != "DHW = 0") %>% 
   mutate(dhw_type = as.factor(dhw_type)) %>% 
   ggplot(data = ., aes(x = date, y = freq, fill = dhw_type)) +
-    geom_area(stat = "identity", position = "identity") +
-    scale_y_continuous(limits = c(0, 110), breaks = c(0, 25, 50, 75, 100)) +
+    geom_vline(xintercept = c(as_date("1998-07-01"), as_date("2010-07-01"), as_date("2016-06-01")), 
+               linetype = "dashed", linewidth = 0.35) +
+    geom_area(stat = "identity", position = "stack", outline.type = "lower") +
+    scale_y_continuous(limits = c(0, 100), breaks = c(0, 25, 50, 75, 100)) +
     scale_fill_manual(breaks = c("0 < DHW < 4", "4 <= DHW < 8", "DHW >= 8"), 
+                      labels = c("0 < DHW < 4", "4 ⩽ DHW < 8", "DHW ⩾ 8"),
                       values = c("#2c82c9", "#fabe58", "#d64541"), name = NULL) +
     labs(x = "Year", y = "Sites (%)", title = "<b>D.</b> East Asian Seas") +
     theme_graph() +
-    theme(legend.direction = "horizontal",
-          legend.position = c(0.5, 0.925),
+    theme(legend.direction = "vertical",
+          legend.position = c(0.2, 0.85),
           plot.title = element_markdown(size = rel(1)),
-          legend.background = element_blank()) +
-  lims(x = c(as_date("1975-01-01"), as_date("2020-01-01")))
+          legend.background = element_blank(),
+          legend.key = element_blank(),
+          legend.key.size = unit(10, "points"),
+          legend.text = element_text(size = 8)) +
+    lims(x = c(as_date("1975-01-01"), as_date("2020-01-01")))
 
 # 7. Subfigure E (DHW) ----
 
@@ -170,17 +176,23 @@ plot_e <- data_dhw_percent %>%
   filter(dhw_type != "DHW = 0") %>% 
   mutate(dhw_type = as.factor(dhw_type)) %>% 
   ggplot(data = ., aes(x = date, y = freq, fill = dhw_type)) +
-  geom_area(stat = "identity", position = "identity") +
-  scale_y_continuous(limits = c(0, 110), breaks = c(0, 25, 50, 75, 100)) +
-  scale_fill_manual(breaks = c("0 < DHW < 4", "4 <= DHW < 8", "DHW >= 8"), 
-                    values = c("#2c82c9", "#fabe58", "#d64541"), name = NULL) +
-  labs(x = "Year", y = "Sites (%)", title = "<b>E.</b> Other regions") +
-  theme_graph() +
-  theme(legend.direction = "horizontal",
-        legend.position = c(0.5, 0.925),
-        plot.title = element_markdown(size = rel(1)),
-        legend.background = element_blank()) +
-  lims(x = c(as_date("1975-01-01"), as_date("2020-01-01")))
+    geom_vline(xintercept = c(as_date("1998-07-01"), as_date("2010-07-01"), as_date("2016-06-01")), 
+               linetype = "dashed", linewidth = 0.35) +
+    geom_area(stat = "identity", position = "stack", outline.type = "lower") +
+    scale_y_continuous(limits = c(0, 100), breaks = c(0, 25, 50, 75, 100)) +
+    scale_fill_manual(breaks = c("0 < DHW < 4", "4 <= DHW < 8", "DHW >= 8"), 
+                      labels = c("0 < DHW < 4", "4 ⩽ DHW < 8", "DHW ⩾ 8"),
+                      values = c("#2c82c9", "#fabe58", "#d64541"), name = NULL) +
+    labs(x = "Year", y = "Sites (%)", title = "<b>E.</b> Other regions") +
+    theme_graph() +
+    theme(legend.direction = "vertical",
+          legend.position = c(0.2, 0.85),
+          plot.title = element_markdown(size = rel(1)),
+          legend.background = element_blank(),
+          legend.key = element_blank(),
+          legend.key.size = unit(10, "points"),
+          legend.text = element_text(size = 8)) +
+    lims(x = c(as_date("1975-01-01"), as_date("2020-01-01")))
 
 # 8. Combine the plots ----
 
