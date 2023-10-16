@@ -1,0 +1,86 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "",
+  out.width = "100%"
+)
+options(tibble.print_min = 5, tibble.print_max = 5)
+```
+
+# **Hard coral cover resilience in the Coral Triangle in a context of global decline**
+
+**This repository contains code associated to the article:**
+
+Wicquart, J. *et al.* (*in prep.*). Hard coral cover resilience in the Coral Triangle in a context of global decline.
+
+
+## 1. Abstract
+
+
+[To complete]
+
+
+## 2. How to download this project?
+
+On the project main page on GitHub, click on the green button `Code` and then click on `Download ZIP`
+
+
+## 3. Datasets used
+
+  * 2020 GCRMN modeled hard coral cover trends
+  * Natural Earth Data
+  * Coral Reef Watch
+
+## 4. Code description
+
+  * `00_site-coordinates.R`
+  * `01_extract_dhw-percent.R`
+  * `02_figure-1.R`
+  * `03_figure-2.R`
+  * `04_figure-3.R`
+  * `05_figure-4.R`
+  * `06_supp-figure-1.R`
+  * `07_supp-figure-2.R`
+
+  * :file_folder: **functions**
+
+    - `data_cleaning.R` 
+    - `data_cleaning.R`
+    - `data_cleaning.R` Graphical parameters
+    - 
+    - 
+    - 
+
+
+## 5. How to report issues?
+
+Please report any bugs or issues [HERE](https://github.com/JWicquart/monitoring_workflow/issues).
+
+
+## 6. Reproducibility parameters
+
+```{r echo=FALSE, message=FALSE}
+
+# 1. Packages used in most R scripts ----
+
+library(tidyverse)
+library(magrittr)
+library(sf)
+library(terra)
+library(future)
+library(furrr) 
+library(patchwork)
+library(ggtext)
+library(tidytext)
+
+# 2. Print session info ----
+
+sessionInfo()
+
+```
