@@ -1,108 +1,101 @@
 # 1. Load packages ----
 
 library(tidyverse)
-library(magrittr)
-library(sf)
-sf_use_s2(FALSE) # Switch from S2 to GEOS
+library(patchwork)
+library(tidytext)
+library(ggtext)
 
 # 2. Source functions ----
 
 source("code/functions/graphical_par.R")
-source("code/functions/theme_map.R")
-source("code/functions/data_cleaning.R")
+source("code/functions/theme_graph.R")
 
-# 3. Define the CRS ----
+# 3. Transform data ----
 
-crs_selected <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=160 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+# 3.1 Overall trend --
 
-# 4. Load background maps and change its CRS ----
+data_overall <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>% 
+  filter(Var == "Hard Coral Cover") %>% 
+  filter(Year %in% 1996:2019) %>% 
+  rename(mean = value,
+         upper = .upper_0.8,
+         lower = .lower_0.8) %>% 
+  mutate(bound = case_when(Year %in% 1996:1998 ~ "before",
+                           Year %in% 2017:2019 ~ "after")) %>% 
+  drop_na(bound) %>% 
+  group_by(GCRMN_region, bound) %>% 
+  summarise(mean = mean(mean),
+            lower = mean(lower),
+            upper = mean(upper)) %>%
+  ungroup() %>% 
+  arrange(GCRMN_region, bound) %>% 
+  mutate_at(vars(mean, lower, upper), ~if_else(str_detect(bound, "before") == TRUE, -.x, .x)) %>% 
+  group_by(GCRMN_region) %>% 
+  summarise_at(vars(mean, lower, upper), ~sum(.x)) %>% 
+  ungroup() %>% 
+  mutate(bound = "<b>A.</b> Overall (1996 to 2019)") %>% 
+  mutate(GCRMN_region = fct_reorder(GCRMN_region, mean, .desc = TRUE))
 
-# 4.1 Load shapefile --
+# 3.2 Mass bleaching events --
 
-data_map <- read_sf("data/00_shapefiles/ne_10m_land/ne_10m_land.shp") %>% 
-  st_transform(crs = 4326)
+data_events <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>% 
+  filter(Var == "Hard Coral Cover") %>% 
+  rename(mean = value,
+         upper = .upper_0.8,
+         lower = .lower_0.8) %>% 
+  mutate(bound_year = case_when(Year %in% 1996:1998 ~ "MBE1998_before",
+                                Year %in% 1999:2001 ~ "MBE1998_after",
+                                Year %in% 2008:2010 ~ "MBE2010_before",
+                                Year %in% 2011:2013 ~ "MBE2010_after",
+                                Year %in% 2014:2016 ~ "MBE2016_before",
+                                Year %in% 2017:2019 ~ "MBE2016_after")) %>% 
+  group_by(GCRMN_region, bound_year) %>% 
+  summarise(mean = mean(mean),
+            lower = mean(lower),
+            upper = mean(upper)) %>%
+  ungroup() %>% 
+  drop_na(bound_year) %>% 
+  arrange(GCRMN_region, bound_year) %>% 
+  mutate(bound = str_sub(bound_year, 1, 7)) %>%
+  mutate_at(vars(mean, lower, upper), ~if_else(str_detect(bound_year, "before") == TRUE, -.x, .x)) %>% 
+  group_by(GCRMN_region, bound) %>% 
+  summarise_at(vars(mean, lower, upper), ~sum(.x)) %>% 
+  ungroup() %>% 
+  mutate(bound = str_replace_all(bound, c("MBE1998" = "<b>B.</b> 1998 mass bleaching event",
+                                          "MBE2010" = "<b>C.</b> 2010 mass bleaching event",
+                                          "MBE2016" = "<b>D.</b> 2016 mass bleaching event")))
 
-# 4.2 Define the offset --
+# 3.3 Combine data --
 
-correction_offset <- 180 - 160 # Here 160 is the same value than +lon_0 from crs_selected
+data_combined <- bind_rows(data_events, data_overall) %>% 
+  mutate(bound = fct_relevel(bound, c("<b>A.</b> Overall (1996 to 2019)", 
+                                      "<b>B.</b> 1998 mass bleaching event", 
+                                      "<b>C.</b> 2010 mass bleaching event", 
+                                      "<b>D.</b> 2016 mass bleaching event")),
+         GCRMN_region = str_replace_all(GCRMN_region, c("Global" = "**Global**",
+                                                        "East Asia" = "<span style='color:#ec644b'>**East Asian Seas**</span>")),
+         GCRMN_region = reorder_within(GCRMN_region, mean, bound))
 
-# 4.3 Define a long and slim polygon that overlaps the meridian line --
+# 4. Make the plot ----
 
-correction_polygon <- st_polygon(x = list(rbind(c(-0.0001 - correction_offset, 90),
-                                                c(0 - correction_offset, 90),
-                                                c(0 - correction_offset, -90),
-                                                c(-0.0001 - correction_offset, -90),
-                                                c(-0.0001 - correction_offset, 90)))) %>%
-  st_sfc() %>%
-  st_set_crs(4326)
+ggplot(data = data_combined, aes(x = GCRMN_region, y = mean, group = bound)) +
+  geom_segment(aes(yend = 0, xend = GCRMN_region, 
+                   color = if_else(str_detect(GCRMN_region, "East Asia") == TRUE, "#d24d57", "#446CB3")),
+               show.legend = FALSE) +
+  geom_hline(yintercept = 0, linewidth = 0.4) +
+  geom_point(aes(fill = if_else(str_detect(GCRMN_region, "East Asia") == TRUE, "#d24d57", "#446CB3")),
+             shape = 21, size = 3, color = "white", show.legend = FALSE) +
+  coord_flip() +
+  scale_fill_identity() +
+  scale_color_identity() +
+  labs(y = "Absolute difference in HCC (%)", x = NULL) +
+  facet_wrap(~bound, scales = "free_y") +
+  scale_x_reordered() +
+  theme_graph() +
+  theme(axis.text.y = element_markdown(),
+        strip.background = element_blank(),
+        strip.text = element_markdown(hjust = -0.05, size = 11))
 
-# 4.4 Modify data_map to remove overlapping portions using correction_polygon --
+# 5. Save the plot ----
 
-data_map <- data_map %>% 
-  st_difference(correction_polygon) %>% 
-  st_transform(crs_selected)
-
-# 5. Load country boundaries data ----
-
-data_countries <- read_sf("data/00_shapefiles/ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp") %>% 
-  st_transform(crs = 4326) %>% 
-  st_transform(crs = crs_selected)
-
-# 6. Load and transform benthic cover synthetic dataset ----
-
-# 6.1 GCRMN regions --
-
-load("data/00_shapefiles/gcrmn_regions.RData")
-
-# 6.2 Benthic cover synthetic dataset --
-
-data_benthos <- read.csv2("data/01_benthic-data/03-merge_all_all_all_benthos_NA.csv", stringsAsFactors = TRUE) %>% 
-  data_cleaning(data = .)
-
-data_gcrmn_regions <- data_gcrmn_regions %>% 
-  st_transform(crs = crs_selected)
-
-data_gcrmn_regions[7,] %<>% # Pacific is row number 7; note the special pipe from magrittr
-  st_buffer(1000) # To join Pacific polygons
-
-# 7. Create the tropics ----
-
-data_tropics <- tibble(long = c(-180, 180, -180, 180, -180, 180), 
-                       lat = c(0, 0, 23.43656, 23.43656, -23.43656, -23.43656), 
-                       tropic = c("Equator", "Equator", "Tropic of Cancer", "Tropic of Cancer",
-                                  "Tropic of Capricorne", "Tropic of Capricorne")) %>% 
-  st_as_sf(coords = c("long", "lat"), crs = 4326) %>% 
-  group_by(tropic) %>% 
-  summarise() %>% 
-  st_cast("LINESTRING") %>% 
-  st_difference(correction_polygon) %>% 
-  st_transform(crs_selected)
-
-data_tropics_no_overlap <- st_intersection(data_tropics, data_gcrmn_regions)
-
-data_tropics_no_overlap$var <- "true"
-
-data_tropics_no_overlap <- st_difference(data_tropics, st_union(st_geometry(data_tropics_no_overlap)))
-
-# 8. Make the map ----
-
-ggplot() +
-  # Tropics
-  geom_sf(data = data_tropics_no_overlap, linetype = "dashed", color = "#363737", linewidth = 0.25) +
-  # GCRMN regions
-  geom_sf(data = data_gcrmn_regions, aes(fill = gcrmn_region), alpha = 0.2, show.legend = FALSE) +
-  # Site of benthic cover data
-  geom_sf(data = data_benthos, aes(color = gcrmn_region), size = 0.5) +
-  # Background map
-  geom_sf(data = data_map, size = 0.25) +
-  # Country boundaries
-  geom_sf(data = data_countries, size = 0.2) +
-  coord_sf(ylim = c(-5000000, 5000000), expand = FALSE) +
-  theme_map() +
-  guides(colour = guide_legend(override.aes = list(size = 4))) +
-  scale_color_manual(values = palette_regions) +
-  scale_fill_manual(values = palette_regions)
-
-# 9. Save the figure ----
-
-ggsave("figs/figure-3.png", width = 7, height = 3, dpi = 600)
+ggsave("figs/figure-2.png", height = 6, width = 8, dpi = 600)

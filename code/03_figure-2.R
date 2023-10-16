@@ -1,101 +1,214 @@
 # 1. Load packages ----
 
 library(tidyverse)
+library(magrittr)
+library(sf)
+sf_use_s2(FALSE) # Switch from S2 to GEOS
 library(patchwork)
-library(tidytext)
 library(ggtext)
 
 # 2. Source functions ----
 
 source("code/functions/graphical_par.R")
+source("code/functions/theme_map.R")
 source("code/functions/theme_graph.R")
+source("code/functions/transform_for_ribbon.R")
+source("code/functions/data_cleaning.R")
 
-# 3. Transform data ----
+# 3. Subfigure A (map) ----
 
-# 3.1 Overall trend --
+crs_selected <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=160 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
 
-data_overall <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>% 
-  filter(Var == "Hard Coral Cover") %>% 
-  filter(Year %in% 1996:2019) %>% 
-  rename(mean = value,
-         upper = .upper_0.8,
-         lower = .lower_0.8) %>% 
-  mutate(bound = case_when(Year %in% 1996:1998 ~ "before",
-                           Year %in% 2017:2019 ~ "after")) %>% 
-  drop_na(bound) %>% 
-  group_by(GCRMN_region, bound) %>% 
-  summarise(mean = mean(mean),
-            lower = mean(lower),
-            upper = mean(upper)) %>%
-  ungroup() %>% 
-  arrange(GCRMN_region, bound) %>% 
-  mutate_at(vars(mean, lower, upper), ~if_else(str_detect(bound, "before") == TRUE, -.x, .x)) %>% 
-  group_by(GCRMN_region) %>% 
-  summarise_at(vars(mean, lower, upper), ~sum(.x)) %>% 
-  ungroup() %>% 
-  mutate(bound = "<b>A.</b> Overall (1996 to 2019)") %>% 
-  mutate(GCRMN_region = fct_reorder(GCRMN_region, mean, .desc = TRUE))
+## 3.1 Load shapefile ----
 
-# 3.2 Mass bleaching events --
+data_map <- read_sf("data/00_shapefiles/ne_10m_land/ne_10m_land.shp") %>% 
+  st_transform(crs = 4326)
 
-data_events <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>% 
-  filter(Var == "Hard Coral Cover") %>% 
-  rename(mean = value,
-         upper = .upper_0.8,
-         lower = .lower_0.8) %>% 
-  mutate(bound_year = case_when(Year %in% 1996:1998 ~ "MBE1998_before",
-                                Year %in% 1999:2001 ~ "MBE1998_after",
-                                Year %in% 2008:2010 ~ "MBE2010_before",
-                                Year %in% 2011:2013 ~ "MBE2010_after",
-                                Year %in% 2014:2016 ~ "MBE2016_before",
-                                Year %in% 2017:2019 ~ "MBE2016_after")) %>% 
-  group_by(GCRMN_region, bound_year) %>% 
-  summarise(mean = mean(mean),
-            lower = mean(lower),
-            upper = mean(upper)) %>%
-  ungroup() %>% 
-  drop_na(bound_year) %>% 
-  arrange(GCRMN_region, bound_year) %>% 
-  mutate(bound = str_sub(bound_year, 1, 7)) %>%
-  mutate_at(vars(mean, lower, upper), ~if_else(str_detect(bound_year, "before") == TRUE, -.x, .x)) %>% 
-  group_by(GCRMN_region, bound) %>% 
-  summarise_at(vars(mean, lower, upper), ~sum(.x)) %>% 
-  ungroup() %>% 
-  mutate(bound = str_replace_all(bound, c("MBE1998" = "<b>B.</b> 1998 mass bleaching event",
-                                          "MBE2010" = "<b>C.</b> 2010 mass bleaching event",
-                                          "MBE2016" = "<b>D.</b> 2016 mass bleaching event")))
+## 3.2 Define the offset ----
 
-# 3.3 Combine data --
+correction_offset <- 180 - 160 # Here 160 is the same value than +lon_0 from crs_selected
 
-data_combined <- bind_rows(data_events, data_overall) %>% 
-  mutate(bound = fct_relevel(bound, c("<b>A.</b> Overall (1996 to 2019)", 
-                                      "<b>B.</b> 1998 mass bleaching event", 
-                                      "<b>C.</b> 2010 mass bleaching event", 
-                                      "<b>D.</b> 2016 mass bleaching event")),
-         GCRMN_region = str_replace_all(GCRMN_region, c("Global" = "**Global**",
-                                                        "East Asia" = "<span style='color:#ec644b'>**East Asian Seas**</span>")),
-         GCRMN_region = reorder_within(GCRMN_region, mean, bound))
+## 3.3 Define a long and slim polygon that overlaps the meridian line ----
 
-# 4. Make the plot ----
+correction_polygon <- st_polygon(x = list(rbind(c(-0.0001 - correction_offset, 90),
+                                                c(0 - correction_offset, 90),
+                                                c(0 - correction_offset, -90),
+                                                c(-0.0001 - correction_offset, -90),
+                                                c(-0.0001 - correction_offset, 90)))) %>%
+  st_sfc() %>%
+  st_set_crs(4326)
 
-ggplot(data = data_combined, aes(x = GCRMN_region, y = mean, group = bound)) +
-  geom_segment(aes(yend = 0, xend = GCRMN_region, 
-                   color = if_else(str_detect(GCRMN_region, "East Asia") == TRUE, "#d24d57", "#446CB3")),
-               show.legend = FALSE) +
-  geom_hline(yintercept = 0, linewidth = 0.4) +
-  geom_point(aes(fill = if_else(str_detect(GCRMN_region, "East Asia") == TRUE, "#d24d57", "#446CB3")),
-             shape = 21, size = 3, color = "white", show.legend = FALSE) +
-  coord_flip() +
-  scale_fill_identity() +
+## 3.4 Modify data_map to remove overlapping portions using correction_polygon ----
+
+data_map <- data_map %>% 
+  st_difference(correction_polygon) %>% 
+  st_transform(crs_selected)
+
+## 3.5 Load country boundaries data ----
+
+data_countries <- read_sf("data/00_shapefiles/ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp") %>% 
+  st_transform(crs = 4326) %>% 
+  st_transform(crs = crs_selected)
+
+## 3.6 Load and transform benthic cover synthetic dataset ----
+
+# GCRMN regions --
+
+load("data/00_shapefiles/gcrmn_regions.RData")
+
+# Benthic cover synthetic dataset --
+
+data_benthos <- read.csv2("data/01_benthic-data/03-merge_all_all_all_benthos_NA.csv", stringsAsFactors = TRUE) %>% 
+  data_cleaning(data = .) %>% 
+  mutate(color = if_else(gcrmn_region == "EAS", "#d24d57", "#446CB3"))
+
+## 3.7 Transform CRS ----
+
+data_gcrmn_regions <- data_gcrmn_regions %>% 
+  st_transform(crs = crs_selected) %>% 
+  mutate(color = if_else(gcrmn_region == "EAS", "#d24d57", "#446CB3"))
+
+data_gcrmn_regions[7,] %<>% # Pacific is row number 7; note the special pipe from magrittr
+  st_buffer(1000) # To join Pacific polygons
+
+## 3.8 Create the tropics ----
+
+data_tropics <- tibble(long = c(-180, 180, -180, 180, -180, 180), 
+                       lat = c(0, 0, 23.43656, 23.43656, -23.43656, -23.43656), 
+                       tropic = c("Equator", "Equator", "Tropic of Cancer", "Tropic of Cancer",
+                                  "Tropic of Capricorne", "Tropic of Capricorne")) %>% 
+  st_as_sf(coords = c("long", "lat"), crs = 4326) %>% 
+  group_by(tropic) %>% 
+  summarise() %>% 
+  st_cast("LINESTRING") %>% 
+  st_difference(correction_polygon) %>% 
+  st_transform(crs_selected)
+
+data_tropics_no_overlap <- st_intersection(data_tropics, data_gcrmn_regions)
+
+data_tropics_no_overlap$var <- "true"
+
+data_tropics_no_overlap <- st_difference(data_tropics, st_union(st_geometry(data_tropics_no_overlap)))
+
+## 3.9 Make the map ----
+
+plot_a <- ggplot() +
+  # Tropics
+  geom_sf(data = data_tropics_no_overlap, linetype = "dashed", color = "#363737", linewidth = 0.25) +
+  # GCRMN region
+  geom_sf(data = data_gcrmn_regions, aes(fill = color), alpha = 0.3) +
+  # Site of benthic cover data
+  geom_sf(data = data_benthos, aes(color = color), size = 0.75) +
+  # Background map
+  geom_sf(data = data_map, size = 0.25) +
+  # Country boundaries
+  geom_sf(data = data_countries, size = 0.2) +
+  guides(colour = guide_legend(override.aes = list(size = 5))) +
+  coord_sf(ylim = c(-5000000, 5000000), expand = FALSE) +
+  theme_map() +
+  labs(title = "<b>A</b>") +
   scale_color_identity() +
-  labs(y = "Absolute difference in HCC (%)", x = NULL) +
-  facet_wrap(~bound, scales = "free_y") +
-  scale_x_reordered() +
-  theme_graph() +
-  theme(axis.text.y = element_markdown(),
-        strip.background = element_blank(),
-        strip.text = element_markdown(hjust = -0.05, size = 11))
+  scale_fill_identity() +
+  theme(plot.title = element_markdown(size = rel(1)))
 
-# 5. Save the plot ----
+# 4. Subfigure B (HCC) ----
 
-ggsave("figs/figure-2.png", height = 6, width = 8, dpi = 600)
+## 4.1 Load and filter data ----
+
+data_trend <- read.csv("data/03_modelled-data/ModelledTrends.all.sum.csv") %>% 
+  filter(Var == "Hard Coral Cover" & GCRMN_region == "East Asia")
+
+## 4.2 Make the figure ----
+
+plot_b <- transform_for_ribbon(data = data_trend, region = "East Asia",
+                               title = FALSE, ribbon_color = "#d24d57",
+                               title_name = "<b>B.</b> East Asian Seas") +
+  geom_vline(xintercept = c(1998.6, 2010.6, 2016.0), linetype = "dashed", linewidth = 0.35) +
+  lims(x = c(1975, 2020))
+
+# 5. Subfigure C (HCC) ----
+
+## 5.1 Load and filter data ----
+
+data_trend <- readRDS("data/03_modelled-data/GlobalTrend_sans_EastAsia.RData")$data %>% 
+  mutate(across(c("value", ".lower_0.8", ".lower_0.95", ".upper_0.8", ".upper_0.95"), ~.x*100)) %>% 
+  mutate(GCRMN_region = "Other regions")
+
+## 5.2 Make the figure ----
+
+plot_c <- transform_for_ribbon(data = data_trend, region = "Other regions",
+                               title = FALSE, ribbon_color = "#446CB3",
+                               title_name = "<b>C.</b> Other regions") +
+  geom_vline(xintercept = c(1998.6, 2010.6, 2016.0), linetype = "dashed", linewidth = 0.35) +
+  lims(x = c(1975, 2020))
+
+# 6. Subfigure D (DHW) ----
+
+load("data/04_dhw/data_dhw_percent.RData")
+
+plot_d <- data_dhw_percent %>% 
+  filter(region == "EAS") %>%
+  filter(dhw_type != "DHW = 0") %>% 
+  mutate(dhw_type = as.factor(dhw_type)) %>% 
+  ggplot(data = ., aes(x = date, y = freq, fill = dhw_type)) +
+    geom_vline(xintercept = c(as_date("1998-07-01"), as_date("2010-07-01"), as_date("2016-06-01")), 
+               linetype = "dashed", linewidth = 0.35) +
+    geom_area(stat = "identity", position = "stack", outline.type = "lower") +
+    scale_y_continuous(limits = c(0, 100), breaks = c(0, 25, 50, 75, 100)) +
+    scale_fill_manual(breaks = c("0 < DHW < 4", "4 <= DHW < 8", "DHW >= 8"), 
+                      labels = c("0 < DHW < 4", "4 ⩽ DHW < 8", "DHW ⩾ 8"),
+                      values = c("#2c82c9", "#fabe58", "#d64541"), name = NULL) +
+    labs(x = "Year", y = "Sites (%)", title = "<b>D.</b> East Asian Seas") +
+    theme_graph() +
+    theme(legend.direction = "vertical",
+          legend.position = c(0.2, 0.85),
+          plot.title = element_markdown(size = rel(1)),
+          legend.background = element_blank(),
+          legend.key = element_blank(),
+          legend.key.size = unit(10, "points"),
+          legend.text = element_text(size = 8)) +
+    lims(x = c(as_date("1975-01-01"), as_date("2020-01-01")))
+
+# 7. Subfigure E (DHW) ----
+
+plot_e <- data_dhw_percent %>% 
+  filter(region == "Other regions") %>%
+  filter(dhw_type != "DHW = 0") %>% 
+  mutate(dhw_type = as.factor(dhw_type)) %>% 
+  ggplot(data = ., aes(x = date, y = freq, fill = dhw_type)) +
+    geom_vline(xintercept = c(as_date("1998-07-01"), as_date("2010-07-01"), as_date("2016-06-01")), 
+               linetype = "dashed", linewidth = 0.35) +
+    geom_area(stat = "identity", position = "stack", outline.type = "lower") +
+    scale_y_continuous(limits = c(0, 100), breaks = c(0, 25, 50, 75, 100)) +
+    scale_fill_manual(breaks = c("0 < DHW < 4", "4 <= DHW < 8", "DHW >= 8"), 
+                      labels = c("0 < DHW < 4", "4 ⩽ DHW < 8", "DHW ⩾ 8"),
+                      values = c("#2c82c9", "#fabe58", "#d64541"), name = NULL) +
+    labs(x = "Year", y = "Sites (%)", title = "<b>E.</b> Other regions") +
+    theme_graph() +
+    theme(legend.direction = "vertical",
+          legend.position = c(0.2, 0.85),
+          plot.title = element_markdown(size = rel(1)),
+          legend.background = element_blank(),
+          legend.key = element_blank(),
+          legend.key.size = unit(10, "points"),
+          legend.text = element_text(size = 8)) +
+    lims(x = c(as_date("1975-01-01"), as_date("2020-01-01")))
+
+# 8. Combine the plots ----
+
+## 8.1 Create the layout ----
+
+layout <- "
+AA
+BC
+DE
+"
+
+## 8.2 Combine plots ----
+
+plot_a + plot_b + plot_c + plot_d + plot_e +
+  plot_layout(design = layout, heights = c(0.55, 0.45, 0.45))
+
+## 8.3 Save the plot ----
+
+ggsave("figs/figure-1.png", height = 8, width = 9, dpi = 600)
